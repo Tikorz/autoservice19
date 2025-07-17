@@ -4,6 +4,7 @@
     "": {
       "name": "acme-dashboard",
       "dependencies": {
+        "@netlify/plugin-nextjs": "^5.11.6",
         "@radix-ui/react-dialog": "^1.1.14",
         "@radix-ui/react-label": "^2.1.7",
         "@radix-ui/react-navigation-menu": "^1.2.13",
@@ -78,6 +79,8 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.29", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-uw6guiW/gcAGPDhLmd77/6lW8QLeiV5RUTsAX46Db6oLhGaVj4lhnPwb184s1bkc8kdVg/+h988dro8GRDpmYQ=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@0.2.12", "", { "dependencies": { "@emnapi/core": "^1.4.3", "@emnapi/runtime": "^1.4.3", "@tybys/wasm-util": "^0.10.0" } }, "sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ=="],
+
+    "@netlify/plugin-nextjs": ["@netlify/plugin-nextjs@5.11.6", "", {}, "sha512-F+HiQaUpISBmooALpwDULoCCwUhI6MugEEBstjuxOL2rh2ROFhK4abv87f4GxVXRSmw0AtXAp2eiP8vHcZ3NKQ=="],
 
     "@next/env": ["@next/env@14.2.30", "", {}, "sha512-KBiBKrDY6kxTQWGzKjQB7QirL3PiiOkV7KW98leHFjtVRKtft76Ra5qSA/SL75xT44dp6hOcqiiJ6iievLOYug=="],
 
