@@ -291,10 +291,17 @@ export default function CarsPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-              <Phone className="h-5 w-5 mr-2" />
-              030 / 123 456 789
+              <Phone
+                className="h-5 w-5 mr-2"
+                onClick={() => (window.location.href = "tel:+49304934035")}
+              />
+              030 / 493 40 35
             </Button>
-            <Button size="lg" variant="outline">
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => (window.location.href = "tel:+49304934035")}
+            >
               Beratungstermin vereinbaren
             </Button>
           </div>

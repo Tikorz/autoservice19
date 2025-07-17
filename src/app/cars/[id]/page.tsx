@@ -517,9 +517,10 @@ export default function CarDetailPage() {
                   <Button
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     size="lg"
+                    onClick={() => (window.location.href = "tel:+49304934035")}
                   >
                     <Phone className="h-5 w-5 mr-2" />
-                    030 / 123 456 789
+                    030 / 493 40 35
                   </Button>
                   <Button variant="outline" className="w-full" size="lg">
                     <Mail className="h-5 w-5 mr-2" />
@@ -569,13 +570,14 @@ export default function CarDetailPage() {
               <CardContent className="space-y-3">
                 <div className="flex items-center">
                   <MapPin className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm">
-                    Musterstraße 123, 10119 Berlin
-                  </span>
+                  <span className="text-sm">Badstraße 34, 13357 Berlin</span>
                 </div>
                 <div className="flex items-center">
-                  <Phone className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm">030 / 123 456 789</span>
+                  <Phone
+                    className="h-4 w-4 text-gray-500 mr-2"
+                    onClick={() => (window.location.href = "tel:+49304934035")}
+                  />
+                  <span className="text-sm">030 / 493 40 35</span>
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-4 w-4 text-gray-500 mr-2" />
@@ -583,7 +585,7 @@ export default function CarDetailPage() {
                 </div>
                 <div className="pt-2">
                   <p className="text-xs text-gray-500">
-                    Mo-Fr: 07:30-18:00 • Sa: 08:00-14:00
+                    Mo-Fr: 09:00-18:00 • Sa: 09:00-14:00
                   </p>
                 </div>
               </CardContent>

@@ -115,7 +115,11 @@ export default function HomePage() {
             Dach.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              size="lg"
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => (window.location.href = "tel:+49304934035")}
+            >
               <Phone className="h-5 w-5 mr-2" />
               Termin vereinbaren
             </Button>
@@ -262,7 +266,10 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <Phone className="h-6 w-6 text-blue-400" />
+                  <Phone
+                    className="h-6 w-6 text-blue-400"
+                    onClick={() => (window.location.href = "tel:+49304934035")}
+                  />
                   <div>
                     <p className="font-semibold">Telefon</p>
                     <p className="text-gray-300">030 / 493 40 35</p>
@@ -297,6 +304,7 @@ export default function HomePage() {
                 <Button
                   size="lg"
                   className="w-full bg-blue-600 hover:bg-blue-700"
+                  onClick={() => (window.location.href = "tel:+49304934035")}
                 >
                   <Phone className="h-5 w-5 mr-2" />
                   Jetzt anrufen
