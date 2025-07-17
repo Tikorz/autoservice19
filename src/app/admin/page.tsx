@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
@@ -6,28 +7,20 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Car,
   Plus,
@@ -41,7 +34,6 @@ import {
   Eye,
 } from "lucide-react";
 import Link from "next/link";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // === Typen ===
 export interface CarData {
@@ -83,7 +75,7 @@ export interface CarData {
 }
 type FormState = Partial<CarData>;
 
-// === Optionslisten ===
+// === Options ===
 const equipmentOptions = {
   comfort: ["Klimaanlage", "Klimaautomatik", "Sitzheizung vorn" /*…*/],
   safety: ["ABS", "ESP", "Airbag Fahrer" /*…*/],
@@ -92,23 +84,23 @@ const equipmentOptions = {
   engineTransmission: ["Automatikgetriebe", "Schaltgetriebe" /*…*/],
 };
 
-// === Login-Dialog ===
+// === Login-Komponente ===
 function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
   const handleLogin = () => {
     if (password === "admin123") {
       onLogin();
       setError("");
-    } else setError("Falsches Passwort");
+    } else {
+      setError("Falsches Passwort");
+    }
   };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Shield className="h-10 w-10 text-blue-600 mx-auto mb-2" />
+          <Shield className="mx-auto mb-2 h-10 w-10 text-blue-600" />
           <CardTitle className="text-2xl">Admin-Bereich</CardTitle>
           <CardDescription>Bitte Passwort eingeben</CardDescription>
         </CardHeader>
@@ -124,7 +116,8 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
           />
           {error && <p className="text-red-600">{error}</p>}
           <Button onClick={handleLogin} className="w-full">
-            <Lock className="mr-2" /> Anmelden
+            <Lock className="mr-2" />
+            Anmelden
           </Button>
           <Link
             href="/"
@@ -138,7 +131,7 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
   );
 }
 
-// === Equipment-Selector ===
+// === EquipmentSelector ===
 function EquipmentSelector({
   category,
   title,
@@ -237,7 +230,7 @@ function ImageGallery({
   );
 }
 
-// === Initial-Zustand ===
+// === Initialzustand ===
 const initialForm: FormState = {
   brand: "",
   model: "",
@@ -275,7 +268,6 @@ const initialForm: FormState = {
   notes: "",
 };
 
-// === Hauptkomponente ===
 export default function AdminPage() {
   const supabase = createClientComponentClient();
   const [isAuth, setIsAuth] = useState(false);
@@ -284,7 +276,7 @@ export default function AdminPage() {
   const [editCar, setEditCar] = useState<CarData | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
 
-  // Load
+  // Daten laden (client-side, kein Prerender)
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.from("cars").select("*");
@@ -295,7 +287,7 @@ export default function AdminPage() {
 
   const resetForm = () => setForm(initialForm);
 
-  // Create
+  // Neu anlegen
   const saveNew = async () => {
     const payload = form as Omit<CarData, "id">;
     const { data, error } = await supabase
@@ -303,7 +295,7 @@ export default function AdminPage() {
       .insert([payload])
       .select("*");
     if (error) console.error(error);
-    else setCars((p) => [...p, data![0] as CarData]);
+    else setCars((prev) => [...prev, data![0] as CarData]);
     resetForm();
     setOpenAdd(false);
   };
@@ -320,17 +312,17 @@ export default function AdminPage() {
     if (error) console.error(error);
     else {
       const updated = data![0] as CarData;
-      setCars((p) => p.map((c) => (c.id === updated.id ? updated : c)));
+      setCars((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
     }
     setEditCar(null);
     resetForm();
   };
 
-  // Delete
+  // Löschen
   const deleteCar = async (id: number) => {
     const { error } = await supabase.from("cars").delete().eq("id", id);
     if (error) console.error(error);
-    else setCars((p) => p.filter((c) => c.id !== id));
+    else setCars((prev) => prev.filter((c) => c.id !== id));
   };
 
   if (!isAuth) return <AdminLogin onLogin={() => setIsAuth(true)} />;
@@ -385,7 +377,7 @@ export default function AdminPage() {
               <DialogTitle>Neues Fahrzeug</DialogTitle>
               <DialogDescription>Füllen Sie die Daten aus.</DialogDescription>
             </DialogHeader>
-            {/* … hier dieselben Tabs/Form-Felder wie im vorherigen Beispiel … */}
+            {/* Hier kommen die Tabs/Formfelder (identisch wie im Beispiel oben) */}
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setOpenAdd(false)}>
                 Abbrechen
@@ -410,7 +402,7 @@ export default function AdminPage() {
             <DialogHeader>
               <DialogTitle>Fahrzeug bearbeiten</DialogTitle>
             </DialogHeader>
-            {/* … Tabs/Form wie oben … */}
+            {/* Hier dieselben Tabs/Formfelder, Button ruft saveEdit */}
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setEditCar(null)}>
                 Abbrechen
@@ -423,7 +415,7 @@ export default function AdminPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Liste */}
+        {/* Fahrzeug-Liste */}
         <div className="space-y-6">
           {cars.map((car) => (
             <Card key={car.id}>
