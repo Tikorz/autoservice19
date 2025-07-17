@@ -2,7 +2,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
-import supabase from "@/lib/supabaseClient"; // default‑exportiertes Modul mit URL & KEY
+import supabase from "@/lib/supabaseClient"; // Dein vorinitialisierter Supabase‑Client
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,22 +20,24 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Car,
+  Car as CarIcon,
   Plus,
   Edit,
   Trash2,
   Save,
-  X,
   Shield,
   Lock,
   ImageIcon,
   Eye,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 
-// -------- Typen --------
+// -------------------------------
+// Typen
+// -------------------------------
 export interface CarData {
   id: number;
   brand: string;
@@ -73,162 +75,11 @@ export interface CarData {
   contactPerson: string;
   notes: string;
 }
-type FormState = Partial<CarData>;
+type FormState = Omit<CarData, "id">;
 
-// -------- Option‑Listen --------
-const equipmentOptions = {
-  comfort: ["Klimaanlage", "Klimaautomatik", "Sitzheizung vorn"],
-  safety: ["ABS", "ESP", "Airbag Fahrer"],
-  multimedia: ["Radio", "Bluetooth", "USB-Anschluss"],
-  exterior: ["Alufelgen", "Schiebedach", "LED-Scheinwerfer"],
-  engineTransmission: ["Automatikgetriebe", "Schaltgetriebe"],
-};
-
-// -------- Login-Dialog --------
-function AdminLogin({ onLogin }: { onLogin: () => void }) {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const handleLogin = () => {
-    if (password === "admin123") {
-      onLogin();
-      setError("");
-    } else {
-      setError("Falsches Passwort");
-    }
-  };
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Shield className="h-10 w-10 text-blue-600 mx-auto mb-2" />
-          <CardTitle className="text-2xl">Admin-Bereich</CardTitle>
-          <CardDescription>Bitte Passwort eingeben</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Label htmlFor="pwd">Passwort</Label>
-          <input
-            id="pwd"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-          />
-          {error && <p className="text-red-600">{error}</p>}
-          <Button onClick={handleLogin} className="w-full">
-            <Lock className="mr-2" /> Anmelden
-          </Button>
-          <Link
-            href="/"
-            className="block text-center text-sm text-gray-600 hover:text-blue-600"
-          >
-            ← Zurück
-          </Link>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// -------- EquipmentSelector --------
-function EquipmentSelector({
-  category,
-  title,
-  options,
-  selected = [],
-  onChange,
-}: {
-  category: keyof CarData["equipment"];
-  title: string;
-  options: string[];
-  selected?: string[];
-  onChange: (cat: keyof CarData["equipment"], items: string[]) => void;
-}) {
-  const toggle = (opt: string) => {
-    const next = selected.includes(opt)
-      ? selected.filter((i) => i !== opt)
-      : [...selected, opt];
-    onChange(category, next);
-  };
-  return (
-    <div className="space-y-1">
-      <h5 className="font-medium">
-        {title} ({selected.length})
-      </h5>
-      <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto">
-        {options.map((opt) => (
-          <label key={opt} className="flex items-center">
-            <input
-              type="checkbox"
-              checked={selected.includes(opt)}
-              onChange={() => toggle(opt)}
-              className="mr-2"
-            />
-            <span className="text-sm">{opt}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// -------- ImageGallery --------
-function ImageGallery({
-  images = [],
-  onImagesChange,
-}: {
-  images?: string[];
-  onImagesChange: (imgs: string[]) => void;
-}) {
-  const [url, setUrl] = useState("");
-  const add = () => {
-    const u = url.trim();
-    if (u && !images.includes(u)) onImagesChange([...images, u]);
-    setUrl("");
-  };
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Bild-URL"
-          className="flex-1 px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-        />
-        <Button size="sm" onClick={add}>
-          <Plus />
-        </Button>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        {images.length ? (
-          images.map((img, i) => (
-            <div key={i} className="relative">
-              <img
-                src={img}
-                alt={`Bild ${i + 1}`}
-                className="w-full h-24 object-cover rounded"
-              />
-              <button
-                onClick={() =>
-                  onImagesChange(images.filter((_, idx) => idx !== i))
-                }
-                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))
-        ) : (
-          <div className="col-span-full flex items-center justify-center h-24 border-2 border-dashed rounded">
-            <ImageIcon className="h-8 w-8 text-gray-400" />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
+// -------------------------------
+// Initial‑Daten
+// -------------------------------
 const initialForm: FormState = {
   brand: "",
   model: "",
@@ -266,7 +117,167 @@ const initialForm: FormState = {
   notes: "",
 };
 
-// -------- AdminPage --------
+// -------------------------------
+// Admin‑Login
+// -------------------------------
+function AdminLogin({ onLogin }: { onLogin: () => void }) {
+  const [pwd, setPwd] = useState("");
+  const [err, setErr] = useState("");
+  const login = () => {
+    if (pwd === "admin123") {
+      onLogin();
+      setErr("");
+    } else {
+      setErr("Falsches Passwort");
+    }
+  };
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <Shield className="h-10 w-10 text-blue-600 mx-auto mb-2" />
+          <CardTitle className="text-2xl">Admin‑Bereich</CardTitle>
+          <CardDescription>Passwort eingeben</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Label htmlFor="pwd">Passwort</Label>
+          <input
+            id="pwd"
+            type="password"
+            value={pwd}
+            onChange={(e) => setPwd(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && login()}
+            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+          />
+          {err && <p className="text-red-600">{err}</p>}
+          <Button onClick={login} className="w-full">
+            <Lock className="mr-2" /> Anmelden
+          </Button>
+          <Link
+            href="/"
+            className="block text-center text-sm text-gray-600 hover:text-blue-600"
+          >
+            ← Zurück
+          </Link>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// -------------------------------
+// Equipment‑Selector
+// -------------------------------
+function EquipmentSelector({
+  category,
+  title,
+  options,
+  selected = [],
+  onChange,
+}: {
+  category: keyof CarData["equipment"];
+  title: string;
+  options: string[];
+  selected?: string[];
+  onChange: (cat: keyof CarData["equipment"], items: string[]) => void;
+}) {
+  const toggle = (opt: string) => {
+    const next = selected.includes(opt)
+      ? selected.filter((i) => i !== opt)
+      : [...selected, opt];
+    onChange(category, next);
+  };
+  return (
+    <div className="space-y-2">
+      <h4 className="font-semibold">
+        {title} ({selected.length})
+      </h4>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-auto">
+        {options.map((opt) => (
+          <label
+            key={opt}
+            className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
+          >
+            <input
+              type="checkbox"
+              checked={selected.includes(opt)}
+              onChange={() => toggle(opt)}
+              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            />
+            <span>{opt}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------
+// ImageGallery
+// -------------------------------
+function ImageGallery({
+  images = [],
+  onImagesChange,
+}: {
+  images?: string[];
+  onImagesChange: (imgs: string[]) => void;
+}) {
+  const [url, setUrl] = useState("");
+  const add = () => {
+    const u = url.trim();
+    if (u && !images.includes(u)) onImagesChange([...images, u]);
+    setUrl("");
+  };
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Bild‑URL hinzufügen…"
+          className="flex-1 px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+        />
+        <Button size="sm" onClick={add}>
+          <Plus />
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {images.length ? (
+          images.map((img, i) => (
+            <div key={i} className="relative">
+              <img
+                src={img}
+                alt={`Bild ${i + 1}`}
+                className="w-full h-24 object-cover rounded border"
+                onError={(e) => {
+                  e.currentTarget.src =
+                    "https://via.placeholder.com/200x150?text=nicht+verfügbar";
+                }}
+              />
+              <button
+                onClick={() =>
+                  onImagesChange(images.filter((_, idx) => idx !== i))
+                }
+                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full flex items-center justify-center h-24 border-2 border-dashed rounded">
+            <ImageIcon className="h-8 w-8 text-gray-400" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==================================================
+// AdminPage
+// ==================================================
 export default function AdminPage() {
   const [isAuth, setIsAuth] = useState(false);
   const [cars, setCars] = useState<CarData[]>([]);
@@ -274,52 +285,63 @@ export default function AdminPage() {
   const [editCar, setEditCar] = useState<CarData | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
 
-  // load cars
+  // --- load ---
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.from("cars").select("*");
-      if (error) console.error(error);
-      else setCars(data as unknown as CarData[]);
+      const { data, error } = await supabase
+        .from("cars") // ← kein Generic hier!
+        .select("*"); // ← danach casten
+      if (error) {
+        console.error(error.message);
+      } else {
+        setCars(data as CarData[]); // ← hier der Cast
+      }
     })();
   }, []);
 
+  // Formular zurücksetzen
   const resetForm = () => setForm(initialForm);
 
-  // create
+  // --- create ---
   const saveNew = async () => {
     const payload = form as Omit<CarData, "id">;
     const { data, error } = await supabase
-      .from("cars")
-      .insert([payload])
-      .select("*");
-    if (error) console.error(error);
-    else setCars((prev) => [...prev, (data as unknown as CarData[])[0]]);
+      .from("cars") // ← kein Generic!
+      .insert([payload]) // ← kein Generic!
+      .select("*"); // ← danach casten
+    if (error) {
+      console.error(error.message);
+    } else {
+      const inserted = (data as CarData[])[0];
+      setCars((prev) => [...prev, inserted]);
+    }
     resetForm();
     setOpenAdd(false);
   };
 
-  // update
+  // --- update ---
   const saveEdit = async () => {
     if (!editCar) return;
     const payload = form as Omit<CarData, "id">;
     const { data, error } = await supabase
-      .from("cars")
-      .update(payload)
+      .from("cars") // ← kein Generic!
+      .update(payload) // ← kein Generic!
       .eq("id", editCar.id)
-      .select("*");
-    if (error) console.error(error);
-    else {
-      const updated = (data as unknown as CarData[])[0];
+      .select("*"); // ← danach casten
+    if (error) {
+      console.error(error.message);
+    } else {
+      const updated = (data as CarData[])[0];
       setCars((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
     }
     setEditCar(null);
     resetForm();
   };
 
-  // delete
+  // --- delete ---
   const deleteCar = async (id: number) => {
     const { error } = await supabase.from("cars").delete().eq("id", id);
-    if (error) console.error(error);
+    if (error) console.error(error.message);
     else setCars((prev) => prev.filter((c) => c.id !== id));
   };
 
@@ -327,17 +349,18 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Navigation */}
+      {/* Nav */}
       <nav className="bg-white shadow border-b">
         <div className="max-w-7xl mx-auto px-4 py-2 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Car className="text-blue-600" />
-            <span className="font-bold text-xl">Auto Service 19 - Admin</span>
+            <CarIcon className="text-blue-600" />
+            <span className="font-bold text-xl">Auto Service 19 ‑ Admin</span>
           </div>
           <div className="flex gap-2">
             <Link href="/cars">
               <Button variant="ghost" size="sm">
-                <Eye className="mr-1" /> Übersicht
+                <Eye className="mr-1" />
+                Übersicht
               </Button>
             </Link>
             <Button
@@ -345,17 +368,18 @@ export default function AdminPage() {
               size="sm"
               onClick={() => setIsAuth(false)}
             >
-              <Lock className="mr-1" /> Abmelden
+              <Lock className="mr-1" />
+              Abmelden
             </Button>
           </div>
         </div>
       </nav>
 
-      {/* Content */}
       <div className="max-w-7xl mx-auto p-4">
-        <header className="flex justify-between mb-6">
+        {/* Header + Add */}
+        <header className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Fahrzeug-Verwaltung</h1>
+            <h1 className="text-3xl font-bold">Fahrzeug‑Verwaltung</h1>
             <p className="text-gray-600">Übersicht</p>
           </div>
           <Button
@@ -364,19 +388,42 @@ export default function AdminPage() {
               setOpenAdd(true);
             }}
           >
-            <Plus className="mr-1" /> Neues Fahrzeug
+            <Plus className="mr-1" />
+            Neues Fahrzeug
           </Button>
         </header>
 
-        {/* Add Dialog */}
+        {/* Add‑Dialog */}
         <Dialog open={openAdd} onOpenChange={setOpenAdd}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
             <DialogHeader>
               <DialogTitle>Neues Fahrzeug</DialogTitle>
-              <DialogDescription>Füllen Sie die Daten aus.</DialogDescription>
+              <DialogDescription>Felder ausfüllen</DialogDescription>
             </DialogHeader>
-            {/* Hier kommen deine Tabs + Form-Felder */}
-            <div className="flex justify-end gap-2 pt-4 border-t">
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid grid-cols-4 w-full">
+                <TabsTrigger value="basic">Grunddaten</TabsTrigger>
+                <TabsTrigger value="equipment">Ausstattung</TabsTrigger>
+                <TabsTrigger value="images">Bilder</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+              </TabsList>
+              <TabsContent value="basic" className="space-y-4">
+                {/* hier Inputs binden an `form` */}
+              </TabsContent>
+              <TabsContent value="equipment" className="space-y-4">
+                {/* <EquipmentSelector … /> */}
+              </TabsContent>
+              <TabsContent value="images" className="space-y-4">
+                <ImageGallery
+                  images={form.images}
+                  onImagesChange={(imgs) => setForm({ ...form, images: imgs })}
+                />
+              </TabsContent>
+              <TabsContent value="details" className="space-y-4">
+                {/* hier weitere Inputs */}
+              </TabsContent>
+            </Tabs>
+            <div className="flex justify-end mt-4 space-x-2 border-t pt-4">
               <Button variant="outline" onClick={() => setOpenAdd(false)}>
                 Abbrechen
               </Button>
@@ -388,7 +435,7 @@ export default function AdminPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Dialog */}
+        {/* Edit‑Dialog */}
         <Dialog
           open={!!editCar}
           onOpenChange={() => {
@@ -400,8 +447,8 @@ export default function AdminPage() {
             <DialogHeader>
               <DialogTitle>Fahrzeug bearbeiten</DialogTitle>
             </DialogHeader>
-            {/* Hier deine Tabs + Form-Felder */}
-            <div className="flex justify-end gap-2 pt-4 border-t">
+            {/* gleiche Tabs wie oben, gebunden an `form` */}
+            <div className="flex justify-end mt-4 space-x-2 border-t pt-4">
               <Button variant="outline" onClick={() => setEditCar(null)}>
                 Abbrechen
               </Button>
@@ -413,7 +460,7 @@ export default function AdminPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Fahrzeug-Liste */}
+        {/* Liste */}
         <div className="space-y-6">
           {cars.map((car) => (
             <Card key={car.id}>
@@ -427,13 +474,13 @@ export default function AdminPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-xl font-semibold">{car.title}</h3>
-                  <p className="mt-2 text-2xl font-bold text-blue-600">
-                    {car.price.toLocaleString("de-DE")} €
+                  <p className="text-2xl font-bold text-blue-600 mt-2">
+                    {car.price.toLocaleString("de-DE")} €
                   </p>
-                  <div className="flex gap-2 mt-4">
+                  <div className="mt-4 flex gap-2">
                     <Button
-                      variant="outline"
                       size="sm"
+                      variant="outline"
                       onClick={() => {
                         setEditCar(car);
                         setForm(car);
@@ -442,8 +489,8 @@ export default function AdminPage() {
                       <Edit />
                     </Button>
                     <Button
-                      variant="outline"
                       size="sm"
+                      variant="outline"
                       onClick={() => deleteCar(car.id)}
                     >
                       <Trash2 className="text-red-600" />
