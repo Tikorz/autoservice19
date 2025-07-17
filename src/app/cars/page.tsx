@@ -1,6 +1,6 @@
 "use client";
 
-import { SetStateAction, useState } from "react";
+import { SetStateAction, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Car,
   Search,
-  Filter,
   Fuel,
   Calendar,
   MapPin,
@@ -24,91 +23,31 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-// Mock car data
-const cars = [
-  {
-    id: 1,
-    title: "BMW 3er 320d Touring",
-    price: 18900,
-    year: 2018,
-    mileage: 85000,
-    fuel: "Diesel",
-    transmission: "Automatik",
-    images: [
-      "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=500&h=300&fit=crop",
-    ],
-    features: ["Navi", "Klimaautomatik", "Xenon", "Ledersitze"],
-  },
-  {
-    id: 2,
-    title: "Audi A4 Avant 2.0 TDI",
-    price: 22500,
-    year: 2019,
-    mileage: 65000,
-    fuel: "Diesel",
-    transmission: "Manuell",
-    images: [
-      "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=500&h=300&fit=crop",
-    ],
-    features: ["Quattro", "MMI", "PDC", "SHZ"],
-  },
-  {
-    id: 3,
-    title: "Mercedes C-Klasse T-Modell",
-    price: 25900,
-    year: 2020,
-    mileage: 45000,
-    fuel: "Benzin",
-    transmission: "Automatik",
-    images: [
-      "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=500&h=300&fit=crop",
-    ],
-    features: ["MBUX", "AMG Line", "LED", "Kamera"],
-  },
-  {
-    id: 4,
-    title: "VW Golf 8 GTI",
-    price: 28900,
-    year: 2021,
-    mileage: 32000,
-    fuel: "Benzin",
-    transmission: "Manuell",
-    images: [
-      "https://images.unsplash.com/photo-1606611122017-be30c0c43b6b?w=500&h=300&fit=crop",
-    ],
-    features: ["GTI Performance", "DCC", "Virtual Cockpit", "Soundsystem"],
-  },
-  {
-    id: 5,
-    title: "Audi Q5 40 TDI",
-    price: 32900,
-    year: 2020,
-    mileage: 55000,
-    fuel: "Diesel",
-    transmission: "Automatik",
-    images: [
-      "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=500&h=300&fit=crop",
-    ],
-    features: ["Quattro", "S-Line", "Panorama", "Matrix LED"],
-  },
-  {
-    id: 6,
-    title: "Ford Focus ST Turnier",
-    price: 19900,
-    year: 2019,
-    mileage: 58000,
-    fuel: "Benzin",
-    transmission: "Manuell",
-    images: [
-      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500&h=300&fit=crop",
-    ],
-    features: ["ST Performance", "SYNC 3", "Recaro", "Brembo"],
-  },
-];
+interface CarData {
+  id: string;
+  title: string;
+  price: number;
+  year: number;
+  mileage: number;
+  fuel: string;
+  transmission: string;
+  images: string[];
+  features: string[];
+}
 
 export default function CarsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFuel, setSelectedFuel] = useState("all");
+  const [cars, setCars] = useState<CarData[]>([]);
+
+  useEffect(() => {
+    async function fetchCars() {
+      const res = await fetch("/api/cars");
+      const data = await res.json();
+      setCars(data);
+    }
+    fetchCars();
+  }, []);
 
   const filteredCars = cars.filter((car) => {
     const matchesSearch = car.title
@@ -122,7 +61,6 @@ export default function CarsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Navigation */}
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -145,7 +83,6 @@ export default function CarsPage() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Unsere Fahrzeuge
@@ -157,7 +94,6 @@ export default function CarsPage() {
           </p>
         </div>
 
-        {/* Search and Filter */}
         <div className="mb-8 flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -197,7 +133,6 @@ export default function CarsPage() {
           </div>
         </div>
 
-        {/* Cars Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
           {filteredCars.map((car) => (
             <Card
@@ -206,7 +141,7 @@ export default function CarsPage() {
             >
               <div className="relative">
                 <img
-                  src={car.images[0]}
+                  src={car.images?.[0] || "https://via.placeholder.com/500x300"}
                   alt={car.title}
                   className="w-full h-48 object-cover"
                 />
@@ -255,7 +190,7 @@ export default function CarsPage() {
                     Ausstattung:
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {car.features.map((feature, index) => (
+                    {car.features?.map((feature, index) => (
                       <Badge
                         key={index}
                         variant="secondary"
@@ -280,7 +215,6 @@ export default function CarsPage() {
           ))}
         </div>
 
-        {/* Contact CTA */}
         <div className="bg-gradient-to-br from-blue-50 to-slate-100 p-8 rounded-2xl text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
             Interesse an einem Fahrzeug?
