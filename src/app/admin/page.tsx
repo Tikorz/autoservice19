@@ -1,42 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/lib/supabaseClient";
 import { Toast } from "@/components/ui/use-toast";
 
 interface Car {
-  id: string;
+  id: number;
   title: string;
   price: number;
   year: number;
   mileage: number;
   fuel: string;
   transmission: string;
-  power: string;
-  displacement: string;
-  color: string;
-  doors: number;
-  seats: number;
   images: string[];
-  description: string;
-  condition: string;
-  warranty: string;
-  financing: string;
-  previous_owners: number;
-  accident_free: boolean;
-  nonsmoker: boolean;
-  first_registration: string;
-  last_service: string;
-  next_inspection: string;
+  features: string[];
 }
 
 export default function AdminPage() {
@@ -46,113 +26,127 @@ export default function AdminPage() {
     price: "",
     year: "",
     mileage: "",
+    fuel: "",
+    transmission: "",
+    images: "",
+    features: "",
   });
 
   useEffect(() => {
-    async function fetchCars() {
-      const res = await fetch("/api/cars");
-      const data = await res.json();
-      setCars(data);
-    }
     fetchCars();
   }, []);
 
+  async function fetchCars() {
+    const { data, error } = await supabase
+      .from("cars")
+      .select("*")
+      .order("id", { ascending: false });
+
+    if (error) {
+      Toast({
+        title: "Fehler beim Laden der Autos",
+      });
+    } else {
+      setCars(data as Car[]);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const res = await fetch("/api/cars", {
-      method: "POST",
-      body: JSON.stringify({
-        ...form,
-        price: parseFloat(form.price),
-        year: parseInt(form.year),
-        mileage: parseInt(form.mileage),
-        images: [],
-        fuel: "Benzin",
-        transmission: "Automatik",
-        power: "100 PS",
-        displacement: "1.4L",
-        color: "Schwarz",
-        doors: 5,
-        seats: 5,
-        description: "Beschreibung folgt",
-        condition: "Neu",
-        warranty: "12 Monate",
-        financing: "Möglich",
-        previous_owners: 0,
-        accident_free: true,
-        nonsmoker: true,
-        first_registration: "2024-01",
-        last_service: "2024-06",
-        next_inspection: "2026-06",
-      }),
-      headers: { "Content-Type": "application/json" },
-    });
-    const newCar = await res.json();
-    setCars((prev) => [...prev, newCar]);
-    setForm({ title: "", price: "", year: "", mileage: "" });
-    Toast({ title: "Fahrzeug hinzugefügt!" });
+
+    const newCar = {
+      title: form.title,
+      price: parseInt(form.price),
+      year: parseInt(form.year),
+      mileage: parseInt(form.mileage),
+      fuel: form.fuel,
+      transmission: form.transmission,
+      images: form.images.split(",").map((img) => img.trim()),
+      features: form.features.split(",").map((f) => f.trim()),
+    };
+
+    const { error } = await supabase.from("cars").insert([newCar]);
+
+    if (error) {
+      Toast({ title: "Fehler" });
+    } else {
+      Toast({ title: "Auto hinzugefügt" });
+      setForm({
+        title: "",
+        price: "",
+        year: "",
+        mileage: "",
+        fuel: "",
+        transmission: "",
+        images: "",
+        features: "",
+      });
+      fetchCars(); // Refresh the list
+    }
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Adminbereich – Fahrzeuge</h1>
+    <div className="p-8 max-w-3xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">🚗 Fahrzeugverwaltung</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4 mb-10">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>Titel</Label>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {[
+          { label: "Titel", name: "title" },
+          { label: "Preis", name: "price" },
+          { label: "Baujahr", name: "year" },
+          { label: "Kilometerstand", name: "mileage" },
+          { label: "Kraftstoff", name: "fuel" },
+          { label: "Getriebe", name: "transmission" },
+        ].map((field) => (
+          <div key={field.name}>
+            <Label>{field.label}</Label>
             <input
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
               required
+              value={(form as any)[field.name]}
+              onChange={(e) =>
+                setForm({ ...form, [field.name]: e.target.value })
+              }
             />
           </div>
-          <div>
-            <Label>Preis (€)</Label>
-            <input
-              type="number"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <Label>Baujahr</Label>
-            <input
-              type="number"
-              value={form.year}
-              onChange={(e) => setForm({ ...form, year: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <Label>Kilometerstand</Label>
-            <input
-              type="number"
-              value={form.mileage}
-              onChange={(e) => setForm({ ...form, mileage: e.target.value })}
-              required
-            />
-          </div>
+        ))}
+
+        <div>
+          <Label>Bilder (kommagetrennt)</Label>
+          <Textarea
+            required
+            value={form.images}
+            onChange={(e) => setForm({ ...form, images: e.target.value })}
+            placeholder="https://image1.jpg, https://image2.jpg"
+          />
         </div>
-        <Button type="submit">Fahrzeug erstellen</Button>
+
+        <div>
+          <Label>Ausstattung (kommagetrennt)</Label>
+          <Textarea
+            required
+            value={form.features}
+            onChange={(e) => setForm({ ...form, features: e.target.value })}
+            placeholder="Navi, Klimaautomatik, Xenon"
+          />
+        </div>
+
+        <Button type="submit">Fahrzeug speichern</Button>
       </form>
 
-      <div className="grid gap-6">
+      <hr className="my-10" />
+
+      <h2 className="text-xl font-semibold mb-4">🚘 Bestehende Fahrzeuge</h2>
+      <ul className="space-y-2">
         {cars.map((car) => (
-          <Card key={car.id}>
-            <CardHeader>
-              <CardTitle>{car.title}</CardTitle>
-              <CardDescription>
-                {car.year} • {car.mileage.toLocaleString()} km • {car.price} €
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>{car.description}</p>
-            </CardContent>
-          </Card>
+          <li key={car.id} className="border p-3 rounded">
+            <div className="font-bold">{car.title}</div>
+            <div className="text-sm text-gray-600">
+              {car.year} • {car.fuel} • {car.transmission} •{" "}
+              {car.price.toLocaleString("de-DE")} €
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
