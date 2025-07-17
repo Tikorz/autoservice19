@@ -2,7 +2,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
-import supabase from "@/lib/supabaseClient"; // Dein vorinitialisierter Supabase‑Client
+import supabase from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,6 +21,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import {
   Car as CarIcon,
   Plus,
@@ -78,7 +85,7 @@ export interface CarData {
 type FormState = Omit<CarData, "id">;
 
 // -------------------------------
-// Initial‑Daten
+// Initial‑Formstate
 // -------------------------------
 const initialForm: FormState = {
   brand: "",
@@ -115,6 +122,24 @@ const initialForm: FormState = {
   location: "",
   contactPerson: "",
   notes: "",
+};
+
+// -------------------------------
+// Equipment‑Optionen (Mock)
+// -------------------------------
+const equipmentOptions = {
+  comfort: [
+    "Klimaanlage",
+    "Klimaautomatik",
+    "Sitzheizung vorn",
+    "Sitzheizung hinten",
+    "Lenkradheizung",
+    "Tempomat",
+  ],
+  safety: ["ABS", "ESP", "Airbag Fahrer", "Airbag Beifahrer"],
+  multimedia: ["Radio", "Bluetooth", "USB-Anschluss", "Navigationssystem"],
+  exterior: ["Alufelgen", "Schiebedach", "LED-Scheinwerfer"],
+  engineTransmission: ["Automatikgetriebe", "Schaltgetriebe", "Allradantrieb"],
 };
 
 // -------------------------------
@@ -189,9 +214,9 @@ function EquipmentSelector({
   };
   return (
     <div className="space-y-2">
-      <h4 className="font-semibold">
+      <Label className="font-semibold">
         {title} ({selected.length})
-      </h4>
+      </Label>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-auto">
         {options.map((opt) => (
           <label
@@ -204,7 +229,7 @@ function EquipmentSelector({
               onChange={() => toggle(opt)}
               className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
             />
-            <span>{opt}</span>
+            <span className="text-sm">{opt}</span>
           </label>
         ))}
       </div>
@@ -213,7 +238,7 @@ function EquipmentSelector({
 }
 
 // -------------------------------
-// ImageGallery
+// Image‑Gallery
 // -------------------------------
 function ImageGallery({
   images = [],
@@ -250,10 +275,10 @@ function ImageGallery({
                 src={img}
                 alt={`Bild ${i + 1}`}
                 className="w-full h-24 object-cover rounded border"
-                onError={(e) => {
-                  e.currentTarget.src =
-                    "https://via.placeholder.com/200x150?text=nicht+verfügbar";
-                }}
+                onError={(e) =>
+                  (e.currentTarget.src =
+                    "https://via.placeholder.com/200x150?text=nicht+verfügbar")
+                }
               />
               <button
                 onClick={() =>
@@ -285,33 +310,26 @@ export default function AdminPage() {
   const [editCar, setEditCar] = useState<CarData | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
 
-  // --- load ---
+  // load from Supabase
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("cars") // ← kein Generic hier!
-        .select("*"); // ← danach casten
-      if (error) {
-        console.error(error.message);
-      } else {
-        setCars(data as CarData[]); // ← hier der Cast
-      }
+      const { data, error } = await supabase.from("cars").select("*");
+      if (error) console.error(error.message);
+      else setCars(data as CarData[]);
     })();
   }, []);
 
-  // Formular zurücksetzen
   const resetForm = () => setForm(initialForm);
 
-  // --- create ---
+  // create
   const saveNew = async () => {
     const payload = form as Omit<CarData, "id">;
     const { data, error } = await supabase
-      .from("cars") // ← kein Generic!
-      .insert([payload]) // ← kein Generic!
-      .select("*"); // ← danach casten
-    if (error) {
-      console.error(error.message);
-    } else {
+      .from("cars")
+      .insert([payload])
+      .select("*");
+    if (error) console.error(error.message);
+    else {
       const inserted = (data as CarData[])[0];
       setCars((prev) => [...prev, inserted]);
     }
@@ -319,18 +337,17 @@ export default function AdminPage() {
     setOpenAdd(false);
   };
 
-  // --- update ---
+  // update
   const saveEdit = async () => {
     if (!editCar) return;
     const payload = form as Omit<CarData, "id">;
     const { data, error } = await supabase
-      .from("cars") // ← kein Generic!
-      .update(payload) // ← kein Generic!
+      .from("cars")
+      .update(payload)
       .eq("id", editCar.id)
-      .select("*"); // ← danach casten
-    if (error) {
-      console.error(error.message);
-    } else {
+      .select("*");
+    if (error) console.error(error.message);
+    else {
       const updated = (data as CarData[])[0];
       setCars((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
     }
@@ -338,7 +355,7 @@ export default function AdminPage() {
     resetForm();
   };
 
-  // --- delete ---
+  // delete
   const deleteCar = async (id: number) => {
     const { error } = await supabase.from("cars").delete().eq("id", id);
     if (error) console.error(error.message);
@@ -354,13 +371,12 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 py-2 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <CarIcon className="text-blue-600" />
-            <span className="font-bold text-xl">Auto Service 19 ‑ Admin</span>
+            <span className="font-bold text-xl">Auto Service 19 - Admin</span>
           </div>
           <div className="flex gap-2">
             <Link href="/cars">
               <Button variant="ghost" size="sm">
-                <Eye className="mr-1" />
-                Übersicht
+                <Eye className="mr-1" /> Übersicht
               </Button>
             </Link>
             <Button
@@ -368,8 +384,7 @@ export default function AdminPage() {
               size="sm"
               onClick={() => setIsAuth(false)}
             >
-              <Lock className="mr-1" />
-              Abmelden
+              <Lock className="mr-1" /> Abmelden
             </Button>
           </div>
         </div>
@@ -398,7 +413,7 @@ export default function AdminPage() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
             <DialogHeader>
               <DialogTitle>Neues Fahrzeug</DialogTitle>
-              <DialogDescription>Felder ausfüllen</DialogDescription>
+              <DialogDescription>Fülle alle Felder aus</DialogDescription>
             </DialogHeader>
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid grid-cols-4 w-full">
@@ -407,29 +422,472 @@ export default function AdminPage() {
                 <TabsTrigger value="images">Bilder</TabsTrigger>
                 <TabsTrigger value="details">Details</TabsTrigger>
               </TabsList>
+
+              {/* Basic */}
               <TabsContent value="basic" className="space-y-4">
-                {/* hier Inputs binden an `form` */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Marke */}
+                  <div className="space-y-2">
+                    <Label htmlFor="brand">Marke *</Label>
+                    <input
+                      id="brand"
+                      value={form.brand}
+                      onChange={(e) =>
+                        setForm({ ...form, brand: e.target.value })
+                      }
+                      placeholder="z.B. BMW"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Modell */}
+                  <div className="space-y-2">
+                    <Label htmlFor="model">Modell *</Label>
+                    <input
+                      id="model"
+                      value={form.model}
+                      onChange={(e) =>
+                        setForm({ ...form, model: e.target.value })
+                      }
+                      placeholder="z.B. 3er"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Titel */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="title">Vollständiger Titel *</Label>
+                    <input
+                      id="title"
+                      value={form.title}
+                      onChange={(e) =>
+                        setForm({ ...form, title: e.target.value })
+                      }
+                      placeholder="z.B. BMW 3er 320d Touring"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Preis */}
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Preis (€) *</Label>
+                    <input
+                      id="price"
+                      type="number"
+                      value={form.price}
+                      onChange={(e) =>
+                        setForm({ ...form, price: Number(e.target.value) })
+                      }
+                      placeholder="18900"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Baujahr */}
+                  <div className="space-y-2">
+                    <Label htmlFor="year">Baujahr</Label>
+                    <input
+                      id="year"
+                      type="number"
+                      value={form.year}
+                      onChange={(e) =>
+                        setForm({ ...form, year: Number(e.target.value) })
+                      }
+                      placeholder="2018"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Kilometerstand */}
+                  <div className="space-y-2">
+                    <Label htmlFor="mileage">Kilometerstand</Label>
+                    <input
+                      id="mileage"
+                      type="number"
+                      value={form.mileage}
+                      onChange={(e) =>
+                        setForm({ ...form, mileage: Number(e.target.value) })
+                      }
+                      placeholder="85000"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Kraftstoff */}
+                  <div className="space-y-2">
+                    <Label htmlFor="fuel">Kraftstoff</Label>
+                    <Select
+                      value={form.fuel}
+                      onValueChange={(v) => setForm({ ...form, fuel: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Wählen…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Benzin">Benzin</SelectItem>
+                        <SelectItem value="Diesel">Diesel</SelectItem>
+                        <SelectItem value="Elektro">Elektro</SelectItem>
+                        <SelectItem value="Hybrid">Hybrid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Getriebe */}
+                  <div className="space-y-2">
+                    <Label htmlFor="transmission">Getriebe</Label>
+                    <Select
+                      value={form.transmission}
+                      onValueChange={(v) =>
+                        setForm({ ...form, transmission: v })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Wählen…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Manuell">Manuell</SelectItem>
+                        <SelectItem value="Automatik">Automatik</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Leistung */}
+                  <div className="space-y-2">
+                    <Label htmlFor="power">Leistung</Label>
+                    <input
+                      id="power"
+                      value={form.power}
+                      onChange={(e) =>
+                        setForm({ ...form, power: e.target.value })
+                      }
+                      placeholder="190 PS"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Hubraum */}
+                  <div className="space-y-2">
+                    <Label htmlFor="displacement">Hubraum</Label>
+                    <input
+                      id="displacement"
+                      value={form.displacement}
+                      onChange={(e) =>
+                        setForm({ ...form, displacement: e.target.value })
+                      }
+                      placeholder="2.0 L"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Farbe */}
+                  <div className="space-y-2">
+                    <Label htmlFor="color">Farbe</Label>
+                    <input
+                      id="color"
+                      value={form.color}
+                      onChange={(e) =>
+                        setForm({ ...form, color: e.target.value })
+                      }
+                      placeholder="Schwarz Metallic"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Türen */}
+                  <div className="space-y-2">
+                    <Label htmlFor="doors">Türen</Label>
+                    <Select
+                      value={String(form.doors)}
+                      onValueChange={(v) =>
+                        setForm({ ...form, doors: Number(v) })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Anzahl" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">2</SelectItem>
+                        <SelectItem value="3">3</SelectItem>
+                        <SelectItem value="4">4</SelectItem>
+                        <SelectItem value="5">5</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Sitze */}
+                  <div className="space-y-2">
+                    <Label htmlFor="seats">Sitzplätze</Label>
+                    <Select
+                      value={String(form.seats)}
+                      onValueChange={(v) =>
+                        setForm({ ...form, seats: Number(v) })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Anzahl" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">2</SelectItem>
+                        <SelectItem value="4">4</SelectItem>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="7">7</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </TabsContent>
+
+              {/* Ausstattung */}
               <TabsContent value="equipment" className="space-y-4">
-                {/* <EquipmentSelector … /> */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <EquipmentSelector
+                    category="comfort"
+                    title="Komfort"
+                    options={equipmentOptions.comfort}
+                    selected={form.equipment.comfort}
+                    onChange={(cat, items) =>
+                      setForm({
+                        ...form,
+                        equipment: { ...form.equipment, [cat]: items },
+                      })
+                    }
+                  />
+                  <EquipmentSelector
+                    category="safety"
+                    title="Sicherheit"
+                    options={equipmentOptions.safety}
+                    selected={form.equipment.safety}
+                    onChange={(cat, items) =>
+                      setForm({
+                        ...form,
+                        equipment: { ...form.equipment, [cat]: items },
+                      })
+                    }
+                  />
+                  <EquipmentSelector
+                    category="multimedia"
+                    title="Multimedia"
+                    options={equipmentOptions.multimedia}
+                    selected={form.equipment.multimedia}
+                    onChange={(cat, items) =>
+                      setForm({
+                        ...form,
+                        equipment: { ...form.equipment, [cat]: items },
+                      })
+                    }
+                  />
+                  <EquipmentSelector
+                    category="exterior"
+                    title="Exterieur"
+                    options={equipmentOptions.exterior}
+                    selected={form.equipment.exterior}
+                    onChange={(cat, items) =>
+                      setForm({
+                        ...form,
+                        equipment: { ...form.equipment, [cat]: items },
+                      })
+                    }
+                  />
+                  <EquipmentSelector
+                    category="engineTransmission"
+                    title="Motor & Getriebe"
+                    options={equipmentOptions.engineTransmission}
+                    selected={form.equipment.engineTransmission}
+                    onChange={(cat, items) =>
+                      setForm({
+                        ...form,
+                        equipment: { ...form.equipment, [cat]: items },
+                      })
+                    }
+                  />
+                </div>
               </TabsContent>
+
+              {/* Bilder */}
               <TabsContent value="images" className="space-y-4">
                 <ImageGallery
                   images={form.images}
                   onImagesChange={(imgs) => setForm({ ...form, images: imgs })}
                 />
               </TabsContent>
+
+              {/* Details */}
               <TabsContent value="details" className="space-y-4">
-                {/* hier weitere Inputs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Zustand */}
+                  <div className="space-y-2">
+                    <Label htmlFor="condition">Zustand</Label>
+                    <Select
+                      value={form.condition}
+                      onValueChange={(v) => setForm({ ...form, condition: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Wählen…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Neuwertig">Neuwertig</SelectItem>
+                        <SelectItem value="Sehr gut">Sehr gut</SelectItem>
+                        <SelectItem value="Gut">Gut</SelectItem>
+                        <SelectItem value="Gebraucht">Gebraucht</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Vorbesitzer */}
+                  <div className="space-y-2">
+                    <Label htmlFor="previousOwners">Vorbesitzer</Label>
+                    <input
+                      id="previousOwners"
+                      type="number"
+                      value={form.previousOwners}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          previousOwners: Number(e.target.value),
+                        })
+                      }
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Letzte Inspektion */}
+                  <div className="space-y-2">
+                    <Label htmlFor="inspectionDate">Letzte Inspektion</Label>
+                    <input
+                      id="inspectionDate"
+                      type="date"
+                      value={form.inspectionDate}
+                      onChange={(e) =>
+                        setForm({ ...form, inspectionDate: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Erstzulassung */}
+                  <div className="space-y-2">
+                    <Label htmlFor="registrationDate">Erstzulassung</Label>
+                    <input
+                      id="registrationDate"
+                      type="date"
+                      value={form.registrationDate}
+                      onChange={(e) =>
+                        setForm({ ...form, registrationDate: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* TÜV */}
+                  <div className="space-y-2">
+                    <Label htmlFor="tuv">TÜV</Label>
+                    <input
+                      id="tuv"
+                      value={form.tuv}
+                      onChange={(e) =>
+                        setForm({ ...form, tuv: e.target.value })
+                      }
+                      placeholder="TÜV bis 08/2026"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Standort */}
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Standort</Label>
+                    <input
+                      id="location"
+                      value={form.location}
+                      onChange={(e) =>
+                        setForm({ ...form, location: e.target.value })
+                      }
+                      placeholder="Berlin"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Ansprechpartner */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="contactPerson">Ansprechpartner</Label>
+                    <input
+                      id="contactPerson"
+                      value={form.contactPerson}
+                      onChange={(e) =>
+                        setForm({ ...form, contactPerson: e.target.value })
+                      }
+                      placeholder="Max Mustermann"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Garantie */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="warranty">Garantie</Label>
+                    <input
+                      id="warranty"
+                      value={form.warranty}
+                      onChange={(e) =>
+                        setForm({ ...form, warranty: e.target.value })
+                      }
+                      placeholder="12 Monate Garantie"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Finanzierung */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="financing">Finanzierung</Label>
+                    <input
+                      id="financing"
+                      value={form.financing}
+                      onChange={(e) =>
+                        setForm({ ...form, financing: e.target.value })
+                      }
+                      placeholder="ab 199 €/Monat"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {/* Beschreibung */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="description">Beschreibung</Label>
+                    <Textarea
+                      id="description"
+                      value={form.description}
+                      onChange={(e) =>
+                        setForm({ ...form, description: e.target.value })
+                      }
+                      rows={4}
+                    />
+                  </div>
+                  {/* Interne Notizen */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="notes">Notizen</Label>
+                    <Textarea
+                      id="notes"
+                      value={form.notes}
+                      onChange={(e) =>
+                        setForm({ ...form, notes: e.target.value })
+                      }
+                      rows={3}
+                    />
+                  </div>
+                  {/* Checkboxes */}
+                  <div className="flex items-center space-x-6 md:col-span-2">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={form.accidentFree}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            accidentFree: e.target.checked,
+                          })
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Unfallfrei</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={form.nonsmoker}
+                        onChange={(e) =>
+                          setForm({ ...form, nonsmoker: e.target.checked })
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Nichtraucher</span>
+                    </label>
+                  </div>
+                </div>
               </TabsContent>
             </Tabs>
-            <div className="flex justify-end mt-4 space-x-2 border-t pt-4">
+            <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setOpenAdd(false)}>
                 Abbrechen
               </Button>
               <Button onClick={saveNew}>
-                <Save className="mr-1" />
-                Speichern
+                <Save className="mr-1" /> Speichern
               </Button>
             </div>
           </DialogContent>
@@ -447,20 +905,19 @@ export default function AdminPage() {
             <DialogHeader>
               <DialogTitle>Fahrzeug bearbeiten</DialogTitle>
             </DialogHeader>
-            {/* gleiche Tabs wie oben, gebunden an `form` */}
-            <div className="flex justify-end mt-4 space-x-2 border-t pt-4">
+            {/* gleiche Tabs/Form wie oben, nur Buttons unten: */}
+            <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setEditCar(null)}>
                 Abbrechen
               </Button>
               <Button onClick={saveEdit}>
-                <Save className="mr-1" />
-                Aktualisieren
+                <Save className="mr-1" /> Aktualisieren
               </Button>
             </div>
           </DialogContent>
         </Dialog>
 
-        {/* Liste */}
+        {/* Fahrzeug‑Liste */}
         <div className="space-y-6">
           {cars.map((car) => (
             <Card key={car.id}>
@@ -474,7 +931,7 @@ export default function AdminPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-xl font-semibold">{car.title}</h3>
-                  <p className="text-2xl font-bold text-blue-600 mt-2">
+                  <p className="mt-2 text-2xl font-bold text-blue-600">
                     {car.price.toLocaleString("de-DE")} €
                   </p>
                   <div className="mt-4 flex gap-2">
