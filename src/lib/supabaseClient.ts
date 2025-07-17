@@ -1,8 +1,10 @@
-// lib/supabaseClient.ts
-import { createClient } from "@supabase/supabase-js";
+// src/lib/supabaseClient.ts
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = "https://pixbaghzgolhfybhbaog.supabase.co";
-const supabaseAnonKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpeGJhZ2h6Z29saGZ5YmhiYW9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3ODIzNTcsImV4cCI6MjA2ODM1ODM1N30.CF1pejuJktNQ2DIso_uvJdgYEN2bRT6ABjuwBA6EZfE";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+// von "export const supabase" → "export default supabase"
+export default supabase;
