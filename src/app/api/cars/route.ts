@@ -2,6 +2,13 @@ import supabase from "@/lib/supabaseClient";
 import { NextResponse } from "next/server";
 
 export async function GET() {
+  if (!supabase) {
+    return NextResponse.json(
+      { error: "Supabase nicht konfiguriert" },
+      { status: 500 }
+    );
+  }
+
   const { data, error } = await supabase.from("cars").select("*");
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -10,6 +17,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  if (!supabase) {
+    return NextResponse.json(
+      { error: "Supabase nicht konfiguriert" },
+      { status: 500 }
+    );
+  }
+
   const body = await req.json();
   const { data, error } = await supabase.from("cars").insert([body]).select();
 
