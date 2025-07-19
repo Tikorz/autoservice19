@@ -1,4 +1,4 @@
-import supabase from "./supabaseClient";
+import supabase, { isSupabaseConfigured } from "./supabaseClient";
 
 export const STORAGE_BUCKET = "car-images";
 
@@ -7,6 +7,14 @@ export async function uploadCarImage(
   file: File,
   carId?: string
 ): Promise<string | null> {
+  // Prüfe ob Supabase konfiguriert ist
+  if (!isSupabaseConfigured() || !supabase) {
+    console.warn(
+      "⚠️ Supabase Storage nicht verfügbar. Verwende URL-Upload stattdessen."
+    );
+    return null;
+  }
+
   try {
     // Dateiname mit Timestamp und carId für Eindeutigkeit
     const timestamp = Date.now();
@@ -42,6 +50,10 @@ export async function uploadCarImage(
 
 // Bild aus Storage löschen
 export async function deleteCarImage(imageUrl: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return true; // Fallback: tue so als ob es funktioniert hat
+  }
+
   try {
     // Dateipath aus URL extrahieren
     const fileName = imageUrl.split(`/${STORAGE_BUCKET}/`)[1];
@@ -68,6 +80,10 @@ export async function moveImagesToCarFolder(
   tempImages: string[],
   carId: string
 ): Promise<string[]> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return tempImages; // Fallback: gib Bilder unverändert zurück
+  }
+
   const movedImages: string[] = [];
 
   for (const imageUrl of tempImages) {

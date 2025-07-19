@@ -2,7 +2,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
-import supabase from "@/lib/supabaseClient";
+import supabase, { isSupabaseConfigured } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -232,14 +232,44 @@ export default function AdminPage() {
   const [editCar, setEditCar] = useState<CarData | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
 
-  // load from Supabase
+  // load cars (Supabase oder localStorage)
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.from("cars").select("*");
-      if (error) console.error(error.message);
-      else setCars(data as CarData[]);
+      if (isSupabaseConfigured() && supabase) {
+        // Verwende Supabase
+        const { data, error } = await supabase.from("cars").select("*");
+        if (error) {
+          console.error("Supabase Fehler:", error.message);
+          loadFromLocalStorage(); // Fallback zu localStorage
+        } else {
+          setCars(data as CarData[]);
+        }
+      } else {
+        // Fallback zu localStorage
+        loadFromLocalStorage();
+      }
     })();
   }, []);
+
+  // localStorage Fallback
+  const loadFromLocalStorage = () => {
+    try {
+      const stored = localStorage.getItem("cars-data");
+      if (stored) {
+        setCars(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error("localStorage Fehler:", error);
+    }
+  };
+
+  const saveToLocalStorage = (carsData: CarData[]) => {
+    try {
+      localStorage.setItem("cars-data", JSON.stringify(carsData));
+    } catch (error) {
+      console.error("localStorage Speicher-Fehler:", error);
+    }
+  };
 
   const resetForm = () => setForm(initialForm);
 
@@ -248,63 +278,111 @@ export default function AdminPage() {
     try {
       const payload = form as Omit<CarData, "id">;
 
-      // Erstelle Auto in Datenbank
-      const { data, error } = await supabase
-        .from("cars")
-        .insert([payload])
-        .select("*");
-
-      if (error) {
-        console.error(error.message);
-        return;
-      }
-
-      const inserted = (data as CarData[])[0];
-
-      // Verschiebe temp Bilder in Auto-Ordner
-      if (form.images.length > 0) {
-        const movedImages = await moveImagesToCarFolder(
-          form.images,
-          inserted.id
-        );
-
-        // Aktualisiere Auto mit neuen Bild-URLs
-        await supabase
+      if (isSupabaseConfigured() && supabase) {
+        // Verwende Supabase
+        const { data, error } = await supabase
           .from("cars")
-          .update({ images: movedImages })
-          .eq("id", inserted.id);
+          .insert([payload])
+          .select("*");
 
-        inserted.images = movedImages;
+        if (error) {
+          console.error("Supabase Fehler:", error.message);
+          // Fallback zu localStorage
+          saveNewToLocalStorage();
+          return;
+        }
+
+        const inserted = (data as CarData[])[0];
+
+        // Verschiebe temp Bilder in Auto-Ordner
+        if (form.images.length > 0) {
+          const movedImages = await moveImagesToCarFolder(
+            form.images,
+            inserted.id
+          );
+
+          // Aktualisiere Auto mit neuen Bild-URLs
+          if (supabase) {
+            await supabase
+              .from("cars")
+              .update({ images: movedImages })
+              .eq("id", inserted.id);
+          }
+
+          inserted.images = movedImages;
+        }
+
+        setCars((prev) => [...prev, inserted]);
+      } else {
+        // localStorage Fallback
+        saveNewToLocalStorage();
       }
 
-      setCars((prev) => [...prev, inserted]);
       resetForm();
       setOpenAdd(false);
     } catch (error) {
       console.error("Error saving car:", error);
+      // Letzte Chance: localStorage
+      saveNewToLocalStorage();
     }
+  };
+
+  const saveNewToLocalStorage = () => {
+    const newCar: CarData = {
+      ...form,
+      id: Math.random().toString(36).substr(2, 9), // Einfache ID-Generierung
+    };
+    const updatedCars = [...cars, newCar];
+    setCars(updatedCars);
+    saveToLocalStorage(updatedCars);
   };
 
   // update
   const saveEdit = async () => {
     if (!editCar) return;
     const payload = form as Omit<CarData, "id">;
-    const { data, error } = await supabase
-      .from("cars")
-      .update(payload)
-      .eq("id", editCar.id)
-      .select("*");
-    if (error) console.error(error.message);
-    else {
-      const updated = (data as CarData[])[0];
-      setCars((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+
+    if (isSupabaseConfigured() && supabase) {
+      // Verwende Supabase
+      const { data, error } = await supabase
+        .from("cars")
+        .update(payload)
+        .eq("id", editCar.id)
+        .select("*");
+
+      if (error) {
+        console.error("Supabase Fehler:", error.message);
+        // Fallback zu localStorage
+        saveEditToLocalStorage();
+      } else {
+        const updated = (data as CarData[])[0];
+        setCars((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      }
+    } else {
+      // localStorage Fallback
+      saveEditToLocalStorage();
     }
+
     setEditCar(null);
     resetForm();
   };
 
+  const saveEditToLocalStorage = () => {
+    if (!editCar) return;
+    const updated: CarData = { ...form, id: editCar.id };
+    const updatedCars = cars.map((c) => (c.id === editCar.id ? updated : c));
+    setCars(updatedCars);
+    saveToLocalStorage(updatedCars);
+  };
+
   // Delete
   const deleteCar = async (id: string) => {
+    if (!supabase) {
+      console.warn("Supabase ist nicht konfiguriert. Lösche nur lokal.");
+      setCars((prev) => prev.filter((c) => c.id !== id));
+      return;
+    }
+
     const { error } = await supabase.from("cars").delete().eq("id", id);
     if (error) console.error(error.message);
     else setCars((prev) => prev.filter((c) => c.id !== id));
