@@ -21,6 +21,7 @@ import {
   validateImageFile,
   compressImage,
 } from "@/lib/storage";
+import { isSupabaseConfigured } from "@/lib/supabaseClient";
 
 interface ImageUploadProps {
   images: string[];
@@ -76,7 +77,10 @@ export default function ImageUpload({
         if (url) {
           uploadedUrls.push(url);
         } else {
-          setError(`Upload fehlgeschlagen für ${file.name}`);
+          setError(
+            "Supabase Storage nicht konfiguriert. Bitte verwenden Sie URL-Upload stattdessen."
+          );
+          break; // Stoppe weitere Uploads
         }
       } catch (error) {
         console.error("Upload error:", error);
@@ -160,24 +164,50 @@ export default function ImageUpload({
         )}
       </div>
 
-      <Tabs defaultValue="upload" className="w-full">
+      <Tabs
+        defaultValue={isSupabaseConfigured() ? "upload" : "url"}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="upload">Upload</TabsTrigger>
+          <TabsTrigger value="upload" disabled={!isSupabaseConfigured()}>
+            Upload {!isSupabaseConfigured() && "(nicht verfügbar)"}
+          </TabsTrigger>
           <TabsTrigger value="url">URL</TabsTrigger>
         </TabsList>
 
         {/* File Upload Tab */}
         <TabsContent value="upload" className="space-y-4">
+          {!isSupabaseConfigured() && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="flex items-center">
+                <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
+                <p className="text-sm text-yellow-800">
+                  File-Upload ist nicht verfügbar. Supabase Storage ist nicht
+                  konfiguriert. Bitte verwenden Sie den URL-Tab zum Hinzufügen
+                  von Bildern.
+                </p>
+              </div>
+            </div>
+          )}
           <div
             className={`
               border-2 border-dashed rounded-lg p-6 text-center transition-colors
-              ${dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"}
-              ${isUploading ? "opacity-50" : "hover:border-gray-400"}
+              ${
+                dragActive && isSupabaseConfigured()
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-300"
+              }
+              ${
+                isUploading || !isSupabaseConfigured()
+                  ? "opacity-50"
+                  : "hover:border-gray-400"
+              }
+              ${!isSupabaseConfigured() ? "cursor-not-allowed" : ""}
             `}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
+            onDragEnter={isSupabaseConfigured() ? handleDrag : undefined}
+            onDragLeave={isSupabaseConfigured() ? handleDrag : undefined}
+            onDragOver={isSupabaseConfigured() ? handleDrag : undefined}
+            onDrop={isSupabaseConfigured() ? handleDrop : undefined}
           >
             {isUploading ? (
               <div className="space-y-3">
@@ -198,6 +228,7 @@ export default function ImageUpload({
                       type="button"
                       variant="link"
                       className="p-0 h-auto text-blue-600"
+                      disabled={!isSupabaseConfigured()}
                       onClick={() => fileInputRef.current?.click()}
                     >
                       durchsuchen

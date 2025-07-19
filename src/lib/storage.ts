@@ -2,7 +2,17 @@ import supabase, { isSupabaseConfigured } from "./supabaseClient";
 
 export const STORAGE_BUCKET = "car-images";
 
-// Upload ein Bild zu Supabase Storage
+// Konvertiere Datei zu Data URL für lokalen Fallback
+function convertFileToDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Upload ein Bild zu Supabase Storage oder lokaler Fallback
 export async function uploadCarImage(
   file: File,
   carId?: string
@@ -10,9 +20,10 @@ export async function uploadCarImage(
   // Prüfe ob Supabase konfiguriert ist
   if (!isSupabaseConfigured() || !supabase) {
     console.warn(
-      "⚠️ Supabase Storage nicht verfügbar. Verwende URL-Upload stattdessen."
+      "⚠️ Supabase Storage nicht verfügbar. Verwende lokalen Fallback."
     );
-    return null;
+    // Lokaler Fallback: Konvertiere zu Data URL
+    return convertFileToDataURL(file);
   }
 
   try {

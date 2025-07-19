@@ -3,17 +3,17 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   if (!supabase) {
-    return NextResponse.json(
-      { error: "Supabase nicht konfiguriert" },
-      { status: 500 }
-    );
+    // Gebe leeres Array zurück wenn Supabase nicht konfiguriert
+    // Frontend sollte dann localStorage direkt verwenden
+    return NextResponse.json([]);
   }
 
   const { data, error } = await supabase.from("cars").select("*");
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Supabase Fehler:", error.message);
+    return NextResponse.json([]);
   }
-  return NextResponse.json(data);
+  return NextResponse.json(data || []);
 }
 
 export async function POST(req: Request) {

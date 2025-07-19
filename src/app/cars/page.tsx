@@ -42,9 +42,27 @@ export default function CarsPage() {
 
   useEffect(() => {
     async function fetchCars() {
-      const res = await fetch("/api/cars");
-      const data = await res.json();
-      setCars(data);
+      try {
+        const res = await fetch("/api/cars");
+        const data = await res.json();
+
+        // Wenn API keine Daten zurückgibt, verwende localStorage
+        if (!data || data.length === 0) {
+          const localData = localStorage.getItem("cars");
+          if (localData) {
+            setCars(JSON.parse(localData));
+          }
+        } else {
+          setCars(data);
+        }
+      } catch (error) {
+        console.error("Fehler beim Laden der Fahrzeuge:", error);
+        // Fallback zu localStorage
+        const localData = localStorage.getItem("cars");
+        if (localData) {
+          setCars(JSON.parse(localData));
+        }
+      }
     }
     fetchCars();
   }, []);
