@@ -29,21 +29,10 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import {
-  Car,
-  Plus,
-  Edit,
-  Trash2,
-  Save,
-  X,
-  Shield,
-  Lock,
-  ImageIcon,
-  Eye,
-  ArrowLeft,
-  CheckCircle,
-} from "lucide-react";
+import { Car, Plus, Edit, Trash2, Save, Shield, Lock, Eye } from "lucide-react";
 import Link from "next/link";
+import ImageUpload from "@/components/ImageUpload";
+import { moveImagesToCarFolder } from "@/lib/storage";
 
 // ----------------------
 // Types
@@ -194,69 +183,6 @@ function EquipmentSelector({
 }
 
 // ----------------------
-// Image Gallery
-// ----------------------
-function ImageGallery({
-  images = [],
-  onImagesChange,
-}: {
-  images?: string[];
-  onImagesChange: (imgs: string[]) => void;
-}) {
-  const [url, setUrl] = useState("");
-  const add = () => {
-    const u = url.trim();
-    if (u && !images.includes(u)) onImagesChange([...images, u]);
-    setUrl("");
-  };
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Bild-URL hinzufügen…"
-          className="flex-1 px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
-        />
-        <Button size="sm" onClick={add}>
-          <Plus />
-        </Button>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        {images.length > 0 ? (
-          images.map((img, i) => (
-            <div key={i} className="relative">
-              <img
-                src={img}
-                alt={`Bild ${i + 1}`}
-                className="w-full h-24 object-cover rounded border"
-                onError={(e) =>
-                  (e.currentTarget.src =
-                    "https://via.placeholder.com/200x150?text=nicht+verfügbar")
-                }
-              />
-              <button
-                onClick={() =>
-                  onImagesChange(images.filter((_, idx) => idx !== i))
-                }
-                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))
-        ) : (
-          <div className="col-span-full flex items-center justify-center h-24 border-2 border-dashed rounded">
-            <ImageIcon className="h-8 w-8 text-gray-400" />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ----------------------
 // Initial form
 // ----------------------
 const initialForm: FormState = {
@@ -319,18 +245,44 @@ export default function AdminPage() {
 
   // create
   const saveNew = async () => {
-    const payload = form as Omit<CarData, "id">;
-    const { data, error } = await supabase
-      .from("cars")
-      .insert([payload])
-      .select("*");
-    if (error) console.error(error.message);
-    else {
+    try {
+      const payload = form as Omit<CarData, "id">;
+
+      // Erstelle Auto in Datenbank
+      const { data, error } = await supabase
+        .from("cars")
+        .insert([payload])
+        .select("*");
+
+      if (error) {
+        console.error(error.message);
+        return;
+      }
+
       const inserted = (data as CarData[])[0];
+
+      // Verschiebe temp Bilder in Auto-Ordner
+      if (form.images.length > 0) {
+        const movedImages = await moveImagesToCarFolder(
+          form.images,
+          inserted.id
+        );
+
+        // Aktualisiere Auto mit neuen Bild-URLs
+        await supabase
+          .from("cars")
+          .update({ images: movedImages })
+          .eq("id", inserted.id);
+
+        inserted.images = movedImages;
+      }
+
       setCars((prev) => [...prev, inserted]);
+      resetForm();
+      setOpenAdd(false);
+    } catch (error) {
+      console.error("Error saving car:", error);
     }
-    resetForm();
-    setOpenAdd(false);
   };
 
   // update
@@ -582,11 +534,13 @@ export default function AdminPage() {
                       <SelectTrigger>
                         <SelectValue placeholder="Zählen" />
                       </SelectTrigger>
-                      {[2, 3, 4, 5].map((n) => (
-                        <SelectItem key={n} value={String(n)}>
-                          {n}
-                        </SelectItem>
-                      ))}
+                      <SelectContent>
+                        {[2, 3, 4, 5].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
@@ -597,11 +551,16 @@ export default function AdminPage() {
                         setForm({ ...form, seats: Number(v) })
                       }
                     >
-                      {[2, 4, 5, 7].map((n) => (
-                        <SelectItem key={n} value={String(n)}>
-                          {n}
-                        </SelectItem>
-                      ))}
+                      <SelectTrigger>
+                        <SelectValue placeholder="Wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[2, 4, 5, 7].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -673,9 +632,11 @@ export default function AdminPage() {
 
               {/* --- IMAGES --- */}
               <TabsContent value="images" className="space-y-4">
-                <ImageGallery
+                <ImageUpload
                   images={form.images}
                   onImagesChange={(imgs) => setForm({ ...form, images: imgs })}
+                  carId={undefined} // Für neue Autos noch keine ID
+                  maxImages={15}
                 />
               </TabsContent>
 
@@ -687,11 +648,18 @@ export default function AdminPage() {
                     value={form.condition}
                     onValueChange={(v) => setForm({ ...form, condition: v })}
                   >
-                    {["Neuwertig", "Sehr gut", "Gut", "Gebraucht"].map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
+                    <SelectTrigger>
+                      <SelectValue placeholder="Wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["Neuwertig", "Sehr gut", "Gut", "Gebraucht"].map(
+                        (s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -863,9 +831,456 @@ export default function AdminPage() {
         >
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
             <DialogHeader>
-              <DialogTitle>Fahrzeug bearbeiten</DialogTitle>
+              <DialogTitle>Fahrzeug bearbeiten: {editCar?.title}</DialogTitle>
+              <DialogDescription>
+                Bearbeiten Sie die Fahrzeugdaten.
+              </DialogDescription>
             </DialogHeader>
-            {/* same Tabs & inputs as above, bound to form & saveEdit */}
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid grid-cols-4 w-full">
+                <TabsTrigger value="basic">Grunddaten</TabsTrigger>
+                <TabsTrigger value="equipment">Ausstattung</TabsTrigger>
+                <TabsTrigger value="images">Bilder</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+              </TabsList>
+
+              {/* --- BASIC --- */}
+              <TabsContent value="basic" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-brand">Marke *</Label>
+                    <input
+                      id="edit-brand"
+                      value={form.brand}
+                      onChange={(e) =>
+                        setForm({ ...form, brand: e.target.value })
+                      }
+                      placeholder="z.B. BMW"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-model">Modell *</Label>
+                    <input
+                      id="edit-model"
+                      value={form.model}
+                      onChange={(e) =>
+                        setForm({ ...form, model: e.target.value })
+                      }
+                      placeholder="z.B. 3er"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="edit-title">Titel *</Label>
+                    <input
+                      id="edit-title"
+                      value={form.title}
+                      onChange={(e) =>
+                        setForm({ ...form, title: e.target.value })
+                      }
+                      placeholder="z.B. BMW 3er 320d Touring"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-price">Preis (€)*</Label>
+                    <input
+                      id="edit-price"
+                      type="number"
+                      value={form.price}
+                      onChange={(e) =>
+                        setForm({ ...form, price: Number(e.target.value) })
+                      }
+                      placeholder="18900"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-year">Baujahr</Label>
+                    <input
+                      id="edit-year"
+                      type="number"
+                      value={form.year}
+                      onChange={(e) =>
+                        setForm({ ...form, year: Number(e.target.value) })
+                      }
+                      placeholder="2018"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-mileage">Kilometerstand</Label>
+                    <input
+                      id="edit-mileage"
+                      type="number"
+                      value={form.mileage}
+                      onChange={(e) =>
+                        setForm({ ...form, mileage: Number(e.target.value) })
+                      }
+                      placeholder="85000"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-fuel">Kraftstoff</Label>
+                    <Select
+                      value={form.fuel}
+                      onValueChange={(value) =>
+                        setForm({ ...form, fuel: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Benzin">Benzin</SelectItem>
+                        <SelectItem value="Diesel">Diesel</SelectItem>
+                        <SelectItem value="Elektro">Elektro</SelectItem>
+                        <SelectItem value="Hybrid">Hybrid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-transmission">Getriebe</Label>
+                    <Select
+                      value={form.transmission}
+                      onValueChange={(value) =>
+                        setForm({ ...form, transmission: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Manuell">Manuell</SelectItem>
+                        <SelectItem value="Automatik">Automatik</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-power">Leistung</Label>
+                    <input
+                      id="edit-power"
+                      value={form.power}
+                      onChange={(e) =>
+                        setForm({ ...form, power: e.target.value })
+                      }
+                      placeholder="190 PS"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-displacement">Hubraum</Label>
+                    <input
+                      id="edit-displacement"
+                      value={form.displacement}
+                      onChange={(e) =>
+                        setForm({ ...form, displacement: e.target.value })
+                      }
+                      placeholder="2.0L"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-color">Farbe</Label>
+                    <input
+                      id="edit-color"
+                      value={form.color}
+                      onChange={(e) =>
+                        setForm({ ...form, color: e.target.value })
+                      }
+                      placeholder="Schwarz Metallic"
+                      className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-doors">Türen</Label>
+                    <Select
+                      value={String(form.doors)}
+                      onValueChange={(v) =>
+                        setForm({ ...form, doors: Number(v) })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Zählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[2, 3, 4, 5].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-seats">Sitzplätze</Label>
+                    <Select
+                      value={String(form.seats)}
+                      onValueChange={(v) =>
+                        setForm({ ...form, seats: Number(v) })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[2, 4, 5, 7].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* --- EQUIPMENT --- */}
+              <TabsContent value="equipment" className="space-y-4">
+                <EquipmentSelector
+                  category="comfort"
+                  title="Komfort"
+                  options={equipmentOptions.comfort}
+                  selected={form.equipment.comfort}
+                  onChange={(cat, items) =>
+                    setForm({
+                      ...form,
+                      equipment: { ...form.equipment, [cat]: items },
+                    })
+                  }
+                />
+                <EquipmentSelector
+                  category="safety"
+                  title="Sicherheit"
+                  options={equipmentOptions.safety}
+                  selected={form.equipment.safety}
+                  onChange={(cat, items) =>
+                    setForm({
+                      ...form,
+                      equipment: { ...form.equipment, [cat]: items },
+                    })
+                  }
+                />
+                <EquipmentSelector
+                  category="multimedia"
+                  title="Multimedia"
+                  options={equipmentOptions.multimedia}
+                  selected={form.equipment.multimedia}
+                  onChange={(cat, items) =>
+                    setForm({
+                      ...form,
+                      equipment: { ...form.equipment, [cat]: items },
+                    })
+                  }
+                />
+                <EquipmentSelector
+                  category="exterior"
+                  title="Exterieur"
+                  options={equipmentOptions.exterior}
+                  selected={form.equipment.exterior}
+                  onChange={(cat, items) =>
+                    setForm({
+                      ...form,
+                      equipment: { ...form.equipment, [cat]: items },
+                    })
+                  }
+                />
+                <EquipmentSelector
+                  category="engineTransmission"
+                  title="Motor & Getriebe"
+                  options={equipmentOptions.engineTransmission}
+                  selected={form.equipment.engineTransmission}
+                  onChange={(cat, items) =>
+                    setForm({
+                      ...form,
+                      equipment: { ...form.equipment, [cat]: items },
+                    })
+                  }
+                />
+              </TabsContent>
+
+              {/* --- IMAGES --- */}
+              <TabsContent value="images" className="space-y-4">
+                <ImageUpload
+                  images={form.images}
+                  onImagesChange={(imgs) => setForm({ ...form, images: imgs })}
+                  carId={editCar?.id} // Verwende existierende Auto-ID
+                  maxImages={15}
+                />
+              </TabsContent>
+
+              {/* --- DETAILS --- */}
+              <TabsContent value="details" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-condition">Zustand</Label>
+                  <Select
+                    value={form.condition}
+                    onValueChange={(v) => setForm({ ...form, condition: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["Neuwertig", "Sehr gut", "Gut", "Gebraucht"].map(
+                        (s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-previousOwners">Vorbesitzer</Label>
+                  <input
+                    id="edit-previousOwners"
+                    type="number"
+                    value={form.previousOwners}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        previousOwners: Number(e.target.value),
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-inspectionDate">Letzte Inspektion</Label>
+                  <input
+                    id="edit-inspectionDate"
+                    type="date"
+                    value={form.inspectionDate}
+                    onChange={(e) =>
+                      setForm({ ...form, inspectionDate: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-registrationDate">Erstzulassung</Label>
+                  <input
+                    id="edit-registrationDate"
+                    type="date"
+                    value={form.registrationDate}
+                    onChange={(e) =>
+                      setForm({ ...form, registrationDate: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-tuv">TÜV</Label>
+                  <input
+                    id="edit-tuv"
+                    value={form.tuv}
+                    onChange={(e) => setForm({ ...form, tuv: e.target.value })}
+                    placeholder="TÜV bis MM/JJJJ"
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-location">Standort</Label>
+                  <input
+                    id="edit-location"
+                    value={form.location}
+                    onChange={(e) =>
+                      setForm({ ...form, location: e.target.value })
+                    }
+                    placeholder="Stadt"
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-contactPerson">Ansprechpartner</Label>
+                  <input
+                    id="edit-contactPerson"
+                    value={form.contactPerson}
+                    onChange={(e) =>
+                      setForm({ ...form, contactPerson: e.target.value })
+                    }
+                    placeholder="Name"
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-warranty">Garantie</Label>
+                  <input
+                    id="edit-warranty"
+                    value={form.warranty}
+                    onChange={(e) =>
+                      setForm({ ...form, warranty: e.target.value })
+                    }
+                    placeholder="z.B. 12 Monate"
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-financing">Finanzierung</Label>
+                  <input
+                    id="edit-financing"
+                    value={form.financing}
+                    onChange={(e) =>
+                      setForm({ ...form, financing: e.target.value })
+                    }
+                    placeholder="ab X€/Monat"
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Beschreibung</Label>
+                  <Textarea
+                    id="edit-description"
+                    rows={4}
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-notes">Interne Notizen</Label>
+                  <Textarea
+                    id="edit-notes"
+                    rows={3}
+                    value={form.notes}
+                    onChange={(e) =>
+                      setForm({ ...form, notes: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="flex space-x-4">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={form.accidentFree}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          accidentFree: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 rounded border-gray-300 focus:ring-blue-500"
+                    />
+                    <span>Unfallfrei</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={form.nonsmoker}
+                      onChange={(e) =>
+                        setForm({ ...form, nonsmoker: e.target.checked })
+                      }
+                      className="h-4 w-4 rounded border-gray-300 focus:ring-blue-500"
+                    />
+                    <span>Nichtraucher</span>
+                  </label>
+                </div>
+              </TabsContent>
+            </Tabs>
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setEditCar(null)}>
                 Abbrechen
@@ -900,7 +1315,9 @@ export default function AdminPage() {
                       variant="outline"
                       onClick={() => {
                         setEditCar(car);
-                        setForm(car);
+                        // Kopiere car data ohne id für form
+                        const { id, ...carData } = car;
+                        setForm(carData);
                       }}
                     >
                       <Edit />
