@@ -1,42 +1,51 @@
-import supabase from "@/lib/supabaseClient";
-import { NextResponse } from "next/server";
+// app/api/cars/route.ts  – NEU
+import { createClient } from "../../../lib/supabaseServer";
+import { NextRequest, NextResponse } from "next/server";
+import { SupabaseClient } from "@supabase/supabase-js";
 
+/* -------------------------------------------------- */
+/* GET  /api/cars                                     */
+/* -------------------------------------------------- */
 export async function GET() {
-  if (!supabase) {
-    // Gebe leeres Array zurück wenn Supabase nicht konfiguriert
-    // Frontend sollte dann localStorage direkt verwenden
-    return NextResponse.json([]);
-  }
-
-  const { data, error } = await supabase.from("cars").select("*");
-  if (error) {
-    console.error("Supabase Fehler:", error.message);
-    return NextResponse.json([]);
-  }
-  return NextResponse.json(data || []);
+  const supabase = createClient();
+  const { data, error } = await supabase.from("cars").select("*").order("id");
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
 }
 
-export async function POST(req: Request) {
-  if (!supabase) {
-    return NextResponse.json(
-      { error: "Supabase nicht konfiguriert" },
-      { status: 500 }
-    );
-  }
-
+/* -------------------------------------------------- */
+/* POST /api/cars                                     */
+/* -------------------------------------------------- */
+export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { data, error } = await supabase.from("cars").insert([body]).select();
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("cars")
+    .insert(body)
+    .select()
+    .single();
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json(data, { status: 201 });
+}
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+/* -------------------------------------------------- */
+/* PUT  /api/cars                                     */
+/* -------------------------------------------------- */
+export async function PUT(req: NextRequest) {
+  const body = await req.json();
+  const { id, ...update } = body;
+  if (!id) return NextResponse.json({ error: "id missing" }, { status: 400 });
 
-  if (!data || data.length === 0) {
-    return NextResponse.json(
-      { error: "Kein Datensatz erstellt." },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json(data[0]);
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("cars")
+    .update(update)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json(data);
 }
