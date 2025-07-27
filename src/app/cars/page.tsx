@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { CarSchema } from "@/lib/schemas";
+
 interface CarData {
   id: string;
   title: string;
@@ -39,6 +41,7 @@ export default function CarsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFuel, setSelectedFuel] = useState("all");
   const [cars, setCars] = useState<CarData[]>([]);
+  const parsed = CarSchema.parse(body); // w
 
   useEffect(() => {
     async function fetchCars() {
