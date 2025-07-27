@@ -23,8 +23,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { CarSchema } from "@/lib/schemas";
-
 interface CarData {
   id: string;
   title: string;
@@ -41,7 +39,6 @@ export default function CarsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFuel, setSelectedFuel] = useState("all");
   const [cars, setCars] = useState<CarData[]>([]);
-  const parsed = CarSchema.parse(body); // w
 
   useEffect(() => {
     async function fetchCars() {
@@ -162,7 +159,7 @@ export default function CarsPage() {
             >
               <div className="relative">
                 <img
-                  src={car.images?.[0] || "https://via.placeholder.com/500x300"}
+                  src={car.images?.[0] || "/fallback-car.jpg"}
                   alt={car.title}
                   className="w-full h-48 object-cover"
                 />
@@ -184,6 +181,13 @@ export default function CarsPage() {
                 <CardDescription className="text-2xl font-bold text-blue-600">
                   {car.price.toLocaleString("de-DE")} €
                 </CardDescription>
+                <a
+                  href="tel:+49304934035"
+                  className="mt-3 block w-full bg-green-600 text-white text-center py-2 rounded hover:bg-green-700"
+                >
+                  <Phone className="inline h-4 w-4 mr-2" />
+                  Jetzt anrufen
+                </a>
               </CardHeader>
 
               <CardContent>

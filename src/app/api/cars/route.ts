@@ -2,6 +2,7 @@
 import { createClient } from "../../../lib/supabaseServer";
 import { NextRequest, NextResponse } from "next/server";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { CarSchema } from "@/lib/schemas";
 
 /* -------------------------------------------------- */
 /* GET  /api/cars                                     */
@@ -19,6 +20,7 @@ export async function GET() {
 /* -------------------------------------------------- */
 export async function POST(req: NextRequest) {
   const body = await req.json();
+  const parsed = CarSchema.parse(body);
   const supabase = createClient();
   const { data, error } = await supabase
     .from("cars")

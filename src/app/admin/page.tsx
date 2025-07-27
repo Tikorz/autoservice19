@@ -33,9 +33,6 @@ import { Car, Plus, Edit, Trash2, Save, Shield, Lock, Eye } from "lucide-react";
 import Link from "next/link";
 import ImageUpload from "@/components/ImageUpload";
 import { moveImagesToCarFolder } from "@/lib/storage";
-import type { Database } from "@/lib/database.types";
-
-type Car = Database["public"]["Tables"]["cars"]["Row"];
 
 // ----------------------
 // Types
