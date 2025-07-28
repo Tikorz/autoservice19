@@ -715,28 +715,21 @@ export default function AdminPage() {
                   type="file"
                   accept="image/*"
                   multiple
-                  className="mt-2"
                   onChange={async (e) => {
+                    if (!supabase) return;
                     const files = Array.from(e.target.files || []);
-                    const newUrls: string[] = [];
-
-                    if (supabase) {
-                      for (const file of files) {
-                        const filename = `${Date.now()}-${file.name}`;
-                        const { error } = await supabase.storage
-                          .from("images")
-                          .upload(filename, file);
-
-                        if (!error) {
-                          const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/images/${filename}`;
-                          newUrls.push(url);
-                        }
-                      }
-                      setForm({
-                        ...form,
-                        images: [...form.images, ...newUrls],
-                      });
+                    const urls: string[] = [];
+                    for (const file of files) {
+                      const filename = `${Date.now()}-${file.name}`;
+                      const { error } = await supabase.storage
+                        .from("images")
+                        .upload(filename, file);
+                      if (!error)
+                        urls.push(
+                          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/images/${filename}`
+                        );
                     }
+                    setForm({ ...form, images: [...form.images, ...urls] });
                   }}
                 />
               </TabsContent>
