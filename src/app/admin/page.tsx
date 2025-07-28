@@ -710,11 +710,34 @@ export default function AdminPage() {
 
               {/* --- IMAGES --- */}
               <TabsContent value="images" className="space-y-4">
-                <ImageUpload
-                  images={form.images}
-                  onImagesChange={(imgs) => setForm({ ...form, images: imgs })}
-                  carId={undefined} // Für neue Autos noch keine ID
-                  maxImages={15}
+                {/* native file upload */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="mt-2"
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    const newUrls: string[] = [];
+
+                    if (supabase) {
+                      for (const file of files) {
+                        const filename = `${Date.now()}-${file.name}`;
+                        const { error } = await supabase.storage
+                          .from("images")
+                          .upload(filename, file);
+
+                        if (!error) {
+                          const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/images/${filename}`;
+                          newUrls.push(url);
+                        }
+                      }
+                      setForm({
+                        ...form,
+                        images: [...form.images, ...newUrls],
+                      });
+                    }
+                  }}
                 />
               </TabsContent>
 

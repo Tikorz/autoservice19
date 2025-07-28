@@ -65,26 +65,20 @@ export default function CarDetailPage() {
       } else {
         setCar(data);
       }
-
       setLoading(false);
     }
 
-    if (!isNaN(carId)) {
-      fetchCar();
-    }
+    if (carId) fetchCar();
   }, [carId]);
 
-  if (loading) {
+  if (loading)
     return <div className="p-6 text-center">Lade Fahrzeugdaten...</div>;
-  }
-
-  if (!car) {
+  if (!car)
     return (
       <div className="p-6 text-center text-red-600 font-bold">
         Fahrzeug nicht gefunden.
       </div>
     );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
