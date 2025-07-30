@@ -232,21 +232,14 @@ export default function AdminPage() {
   const [editCar, setEditCar] = useState<CarData | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
 
-  // load cars (Supabase oder localStorage)
+  // load cars – only Supabase
   useEffect(() => {
     (async () => {
-      if (isSupabaseConfigured() && supabase) {
-        // Verwende Supabase
-        const { data, error } = await supabase.from("cars").select("*");
-        if (error) {
-          console.error("Supabase Fehler:", error.message);
-          loadFromLocalStorage(); // Fallback zu localStorage
-        } else {
-          setCars(data as CarData[]);
-        }
+      const { data, error } = await supabase.from("cars").select("*");
+      if (error) {
+        console.error("Supabase Fehler:", error.message);
       } else {
-        // Fallback zu localStorage
-        loadFromLocalStorage();
+        setCars(data as CarData[]);
       }
     })();
   }, []);
@@ -1419,7 +1412,32 @@ export default function AdminPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => deleteCar(car.id)}
+                      onClick={async () => {
+                        const confirmed = confirm("Fahrzeug wirklich löschen?");
+                        if (!confirmed) return;
+
+                        if (supabase) {
+                          const { error } = await supabase
+                            .from("cars")
+                            .delete()
+                            .eq("id", car.id);
+                          if (!error) {
+                            setCars((prev) =>
+                              prev.filter((c) => c.id !== car.id)
+                            );
+                          } else {
+                            console.error("Delete error:", error.message);
+                          }
+                        } else {
+                          // Fallback localStorage delete
+                          const updated = cars.filter((c) => c.id !== car.id);
+                          setCars(updated);
+                          localStorage.setItem(
+                            "cars-data",
+                            JSON.stringify(updated)
+                          );
+                        }
+                      }}
                     >
                       <Trash2 className="text-red-600" />
                     </Button>
