@@ -33,6 +33,7 @@ import { Car, Plus, Edit, Trash2, Save, Shield, Lock, Eye } from "lucide-react";
 import Link from "next/link";
 import ImageUpload from "@/components/ImageUpload";
 import { moveImagesToCarFolder } from "@/lib/storage";
+import { createClient } from "@/lib/supabaseServer";
 
 // ----------------------
 // Types
@@ -232,29 +233,14 @@ export default function AdminPage() {
   const [editCar, setEditCar] = useState<CarData | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
 
-  // load cars – only Supabase
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.from("cars").select("*");
-      if (error) {
-        console.error("Supabase Fehler:", error.message);
-      } else {
-        setCars(data as CarData[]);
-      }
+      const client = createClient(); // server client
+      const { data, error } = await client.from("cars").select("*");
+      if (error) console.error(error);
+      else setCars(data as CarData[]);
     })();
   }, []);
-
-  // localStorage Fallback
-  const loadFromLocalStorage = () => {
-    try {
-      const stored = localStorage.getItem("cars-data");
-      if (stored) {
-        setCars(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error("localStorage Fehler:", error);
-    }
-  };
 
   const saveToLocalStorage = (carsData: CarData[]) => {
     try {
