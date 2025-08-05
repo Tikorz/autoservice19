@@ -41,30 +41,10 @@ export default function CarsPage() {
   const [cars, setCars] = useState<CarData[]>([]);
 
   useEffect(() => {
-    async function fetchCars() {
-      try {
-        const res = await fetch("/api/cars");
-        const data = await res.json();
-
-        // Wenn API keine Daten zurückgibt, verwende localStorage
-        if (!data || data.length === 0) {
-          const localData = localStorage.getItem("cars");
-          if (localData) {
-            setCars(JSON.parse(localData));
-          }
-        } else {
-          setCars(data);
-        }
-      } catch (error) {
-        console.error("Fehler beim Laden der Fahrzeuge:", error);
-        // Fallback zu localStorage
-        const localData = localStorage.getItem("cars");
-        if (localData) {
-          setCars(JSON.parse(localData));
-        }
-      }
-    }
-    fetchCars();
+    fetch("/api/cars")
+      .then((r) => r.json())
+      .then(setCars)
+      .catch(console.error);
   }, []);
 
   const filteredCars = cars.filter((car) => {
