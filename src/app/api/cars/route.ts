@@ -1,5 +1,5 @@
 // app/api/cars/route.ts  – NEU
-import { createClient } from "../../../lib/supabaseServer";
+import { createClient } from "../../../lib/supabaseServer.server";
 import { NextRequest, NextResponse } from "next/server";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { CarSchema } from "@/lib/schemas";
